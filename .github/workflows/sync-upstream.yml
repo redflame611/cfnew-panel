@@ -1,0 +1,43 @@
+name: Sync with Upstream
+
+on:
+  schedule:
+    # 每天 UTC 时间 00:00 运行（北京时间 08:00）
+    # 你可以修改 cron 表达式，例如 '0 20 * * *' 代表北京时间凌晨 4 点
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 允许在 GitHub 网页端手动点击触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: main  # ⚠️ 如果你的默认分支是 master，请改为 master
+          fetch-depth: 0 # 获取所有历史记录，避免 shallow clone 导致的问题
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync with Upstream
+        env:
+          # ⚠️ 替换为上游仓库的 "用户名/仓库名"
+          UPSTREAM_REPO: "byJoey/cfnew-panel" 
+          # 默认分支名，如果上游是 master 请改为 master
+          BRANCH_NAME: "main" 
+        run: |
+          # 添加上游仓库（如果已存在则忽略）
+          git remote add upstream https://github.com/${UPSTREAM_REPO}.git || true
+          
+          # 获取上游最新代码
+          git fetch upstream
+          
+          # 切换到本地默认分支并合并上游代码
+          git checkout ${BRANCH_NAME}
+          git merge upstream/${BRANCH_NAME} --no-edit
+          
+          # 推送到你的 Fork 仓库
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git ${BRANCH_NAME}
